@@ -1,3 +1,4 @@
+// server.js
 const express = require("express");
 require('dotenv').config();  
 const mongoose = require("mongoose");
@@ -124,7 +125,13 @@ app.post("/api/daily/upload", upload.single("file"), async (req, res) => {
       const unitCost = masterItem ? masterItem.unitCost : 1;
       const totalCost = unitCost * onHand;
 
-      return { item: itemName, onHand, unitCost, totalCost };
+      return { 
+        item: itemName, 
+        onHand, 
+        unitCost, 
+        totalCost,
+        date: new Date()   // ✅ Date added for each row
+      };
     });
 
     // Save to DailyData collection
@@ -149,5 +156,5 @@ app.get("/api/daily", async (req, res) => {
 });
 
 // ---------------------------
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
