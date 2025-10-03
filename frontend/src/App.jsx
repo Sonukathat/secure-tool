@@ -131,15 +131,19 @@ function App() {
                 <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} />
 
                 {/* Y-axis = 0-12 with custom color bands */}
-                <YAxis domain={[0, 12]} />
+                <YAxis
+                  domain={[0, 12]}
+                  ticks={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}
+                  tickFormatter={(value) => value.toFixed(1)} // 0.0, 1.0, 2.0 ...
+                />
 
                 <Tooltip />
                 <Legend />
 
                 {/* Color bands */}
-                <ReferenceArea y1={0} y2={4} x1={chartData[0]?.date} x2={chartData[chartData.length-1]?.date} fill="green" fillOpacity={0.1} />
-                <ReferenceArea y1={4} y2={8} x1={chartData[0]?.date} x2={chartData[chartData.length-1]?.date} fill="yellow" fillOpacity={0.1} />
-                <ReferenceArea y1={8} y2={12} x1={chartData[0]?.date} x2={chartData[chartData.length-1]?.date} fill="red" fillOpacity={0.1} />
+                <ReferenceArea y1={0} y2={4} x1={chartData[0]?.date} x2={chartData[chartData.length - 1]?.date} fill="green" fillOpacity={0.1} />
+                <ReferenceArea y1={4} y2={8} x1={chartData[0]?.date} x2={chartData[chartData.length - 1]?.date} fill="yellow" fillOpacity={0.1} />
+                <ReferenceArea y1={8} y2={12} x1={chartData[0]?.date} x2={chartData[chartData.length - 1]?.date} fill="red" fillOpacity={0.1} />
 
                 {/* Line showing total cost */}
                 <Line type="monotone" dataKey="total" stroke="#ff7300" strokeWidth={2} />
