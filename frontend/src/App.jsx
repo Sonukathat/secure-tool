@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import axios from "axios";
 import {
   ResponsiveContainer,
@@ -10,13 +10,13 @@ import {
   Legend,
   Line,
   ReferenceArea,
+  LabelList,
 } from "recharts";
 
 function App() {
   const [dailyFile, setDailyFile] = useState(null);
   const [dailyResult, setDailyResult] = useState([]);
 
-  // Upload Daily Excel & calculate
   const uploadDaily = async () => {
     if (!dailyFile) return alert("Please select Daily file!");
     const formData = new FormData();
@@ -31,7 +31,6 @@ function App() {
     }
   };
 
-  // Fetch all daily data (optional button)
   const fetchDailyData = async () => {
     try {
       const res = await axios.get("http://localhost:5000/api/daily");
@@ -42,14 +41,14 @@ function App() {
     }
   };
 
-  // Prepare chart data grouped by date
+  // Group data by date
   const groupedData = {};
   dailyResult.forEach(d => {
     const date = new Date(d.date).toLocaleDateString("en-GB", {
       day: "numeric", month: "short", year: "numeric"
     });
     if (!groupedData[date]) groupedData[date] = 0;
-    groupedData[date] += d.totalCost / 1000000; // Millions
+    groupedData[date] += d.totalCost / 1000000; // convert to millions
   });
 
   const chartData = Object.entries(groupedData).map(([date, total]) => ({
@@ -57,7 +56,6 @@ function App() {
     total: Number(total.toFixed(2))
   }));
 
-  // Total sum in millions
   const totalInMillion = dailyResult.reduce((acc, curr) => acc + curr.totalCost, 0) / 1000000;
 
   return (
@@ -66,7 +64,7 @@ function App() {
         Daily Excel Processor & Chart
       </h1>
 
-      {/* Daily File Upload */}
+      {/* Upload Buttons */}
       <div className="flex flex-col md:flex-row justify-center items-center mb-6 gap-4">
         <input
           type="file"
@@ -87,7 +85,7 @@ function App() {
         </button>
       </div>
 
-      {/* Result Table */}
+      {/* Table */}
       {dailyResult.length > 0 && (
         <>
           <div className="overflow-x-auto shadow-lg rounded-xl mb-8">
@@ -115,7 +113,7 @@ function App() {
             </table>
           </div>
 
-          {/* Total in Millions */}
+          {/* Total */}
           <div className="mb-8 text-right text-xl font-bold text-green-700">
             Total Cost (in Millions): {totalInMillion.toFixed(2)} M
           </div>
@@ -127,26 +125,37 @@ function App() {
               <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 50 }}>
                 <CartesianGrid strokeDasharray="3 3" />
 
-                {/* X-axis = dates */}
-                <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} />
-
-                {/* Y-axis = 0-12 with custom color bands */}
+                <XAxis
+                  dataKey="date"
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
+                  interval={0}
+                />
                 <YAxis
+                  type="number"
                   domain={[0, 12]}
                   ticks={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}
-                  tickFormatter={(value) => value.toFixed(1)} // 0.0, 1.0, 2.0 ...
+                  tickFormatter={(v) => v.toFixed(1)}
+                  scale="linear"
                 />
 
                 <Tooltip />
                 <Legend />
 
-                {/* Color bands */}
-                <ReferenceArea y1={0} y2={4} x1={chartData[0]?.date} x2={chartData[chartData.length - 1]?.date} fill="green" fillOpacity={0.1} />
-                <ReferenceArea y1={4} y2={8} x1={chartData[0]?.date} x2={chartData[chartData.length - 1]?.date} fill="yellow" fillOpacity={0.1} />
-                <ReferenceArea y1={8} y2={12} x1={chartData[0]?.date} x2={chartData[chartData.length - 1]?.date} fill="red" fillOpacity={0.1} />
+                {/* Reference areas */}
+                {chartData.length > 0 && (
+                  <>
+                    <ReferenceArea y1={0} y2={4} x1={chartData[0].date} x2={chartData[chartData.length - 1].date} fill="green" fillOpacity={0.1} />
+                    <ReferenceArea y1={4} y2={8} x1={chartData[0].date} x2={chartData[chartData.length - 1].date} fill="yellow" fillOpacity={0.1} />
+                    <ReferenceArea y1={8} y2={12} x1={chartData[0].date} x2={chartData[chartData.length - 1].date} fill="red" fillOpacity={0.1} />
+                  </>
+                )}
 
-                {/* Line showing total cost */}
-                <Line type="monotone" dataKey="total" stroke="#ff7300" strokeWidth={2} />
+                {/* Line with labels */}
+                <Line type="monotone" dataKey="total" stroke="#ff7300" strokeWidth={2} >
+                  <LabelList dataKey="total" position="top" formatter={val => val.toFixed(2)} />
+                </Line>
               </ComposedChart>
             </ResponsiveContainer>
           </div>
