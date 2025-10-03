@@ -1,5 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
+import {
+  ResponsiveContainer,
+  ComposedChart,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  Line,
+  ReferenceArea,
+} from "recharts";
 
 function App() {
   const [dailyFile, setDailyFile] = useState(null);
@@ -20,34 +31,66 @@ function App() {
     }
   };
 
-  // Calculate total in millions
-  const totalInMillion = (dailyResult.reduce((acc, curr) => acc + curr.totalCost, 0) / 1000000).toFixed(2);
+  // Fetch all daily data (optional button)
+  const fetchDailyData = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/daily");
+      setDailyResult(res.data);
+    } catch (err) {
+      console.error(err);
+      alert("Error fetching daily data");
+    }
+  };
+
+  // Prepare chart data grouped by date
+  const groupedData = {};
+  dailyResult.forEach(d => {
+    const date = new Date(d.date).toLocaleDateString("en-GB", {
+      day: "numeric", month: "short", year: "numeric"
+    });
+    if (!groupedData[date]) groupedData[date] = 0;
+    groupedData[date] += d.totalCost / 1000000; // Millions
+  });
+
+  const chartData = Object.entries(groupedData).map(([date, total]) => ({
+    date,
+    total: Number(total.toFixed(2))
+  }));
+
+  // Total sum in millions
+  const totalInMillion = dailyResult.reduce((acc, curr) => acc + curr.totalCost, 0) / 1000000;
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-purple-300 via-pink-200 to-yellow-200 p-8">
       <h1 className="text-4xl font-bold text-center mb-10 text-white shadow-lg p-4 rounded-lg bg-purple-600">
-        Daily Excel Processor
+        Daily Excel Processor & Chart
       </h1>
 
       {/* Daily File Upload */}
-      <div className="flex flex-col md:flex-row justify-center items-center mb-8 gap-4">
-        <input 
-          type="file" 
-          onChange={e => setDailyFile(e.target.files[0])} 
+      <div className="flex flex-col md:flex-row justify-center items-center mb-6 gap-4">
+        <input
+          type="file"
+          onChange={e => setDailyFile(e.target.files[0])}
           className="px-4 py-2 rounded border-2 border-purple-400 hover:border-purple-600 transition cursor-pointer"
         />
-        <button 
-          onClick={uploadDaily} 
+        <button
+          onClick={uploadDaily}
           className="bg-pink-500 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded transition duration-300"
         >
           Upload Daily & Calculate
+        </button>
+        <button
+          onClick={fetchDailyData}
+          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-300"
+        >
+          Show All Daily Data
         </button>
       </div>
 
       {/* Result Table */}
       {dailyResult.length > 0 && (
         <>
-          <div className="overflow-x-auto shadow-lg rounded-xl">
+          <div className="overflow-x-auto shadow-lg rounded-xl mb-8">
             <table className="min-w-full bg-white rounded-xl overflow-hidden">
               <thead className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
                 <tr>
@@ -73,8 +116,35 @@ function App() {
           </div>
 
           {/* Total in Millions */}
-          <div className="mt-4 text-right text-xl font-bold text-green-700">
-            Total Cost (in Millions): {totalInMillion} M
+          <div className="mb-8 text-right text-xl font-bold text-green-700">
+            Total Cost (in Millions): {totalInMillion.toFixed(2)} M
+          </div>
+
+          {/* Chart */}
+          <div className="bg-white p-4 rounded-xl shadow-lg">
+            <h2 className="text-2xl font-bold text-center mb-4">Total Cost per Day (in Millions)</h2>
+            <ResponsiveContainer width="100%" height={400}>
+              <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 50 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+
+                {/* X-axis = dates */}
+                <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} />
+
+                {/* Y-axis = 0-12 with custom color bands */}
+                <YAxis domain={[0, 12]} />
+
+                <Tooltip />
+                <Legend />
+
+                {/* Color bands */}
+                <ReferenceArea y1={0} y2={4} x1={chartData[0]?.date} x2={chartData[chartData.length-1]?.date} fill="green" fillOpacity={0.1} />
+                <ReferenceArea y1={4} y2={8} x1={chartData[0]?.date} x2={chartData[chartData.length-1]?.date} fill="yellow" fillOpacity={0.1} />
+                <ReferenceArea y1={8} y2={12} x1={chartData[0]?.date} x2={chartData[chartData.length-1]?.date} fill="red" fillOpacity={0.1} />
+
+                {/* Line showing total cost */}
+                <Line type="monotone" dataKey="total" stroke="#ff7300" strokeWidth={2} />
+              </ComposedChart>
+            </ResponsiveContainer>
           </div>
         </>
       )}
