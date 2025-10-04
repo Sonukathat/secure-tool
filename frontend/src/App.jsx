@@ -17,7 +17,7 @@ function App() {
   const [dailyFile, setDailyFile] = useState(null);
   const [dailyResult, setDailyResult] = useState([]);
 
-  // Upload Daily Excel
+  // ---------------- Upload Daily Excel ----------------
   const uploadDaily = async () => {
     if (!dailyFile) return alert("Please select Daily file!");
     const formData = new FormData();
@@ -32,7 +32,7 @@ function App() {
     }
   };
 
-  // Fetch all daily data
+  // ---------------- Fetch All Daily Data ----------------
   const fetchDailyData = async () => {
     try {
       const res = await axios.get("http://localhost:5000/api/daily");
@@ -43,25 +43,27 @@ function App() {
     }
   };
 
-  // Group data by date
-  const groupedData = {};
+  // ---------------- Group Data by Date ----------------
+  const dailyTotalsMap = {}; // date => totalCost in millions
   dailyResult.forEach(d => {
     const date = new Date(d.date).toLocaleDateString("en-GB", {
       day: "numeric",
       month: "short",
       year: "numeric",
     });
-    if (!groupedData[date]) groupedData[date] = 0;
-    groupedData[date] += d.totalCost / 1000000; // convert to millions
+    if (!dailyTotalsMap[date]) dailyTotalsMap[date] = 0;
+    dailyTotalsMap[date] += (d.totalCost || 0) / 1000000; // convert to millions
   });
 
-  const chartData = Object.entries(groupedData).map(([date, total]) => ({
-    date,
-    total: Number(total.toFixed(2)),
-  }));
+  const chartData = Object.entries(dailyTotalsMap)
+    .map(([date, total]) => ({
+      date,
+      total: Number(total.toFixed(2)),
+    }))
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
 
   const totalInMillion =
-    dailyResult.reduce((acc, curr) => acc + curr.totalCost, 0) / 1000000;
+    dailyResult.reduce((acc, curr) => acc + (curr.totalCost || 0), 0) / 1000000;
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-purple-300 via-pink-200 to-yellow-200 p-8">
@@ -111,17 +113,26 @@ function App() {
                     className={i % 2 === 0 ? "bg-purple-50" : "bg-pink-50"}
                   >
                     <td className="py-3 px-6">{r.item}</td>
-                    <td className="py-3 px-6 font-semibold">{r.unitCost}</td>
-                    <td className="py-3 px-6">{r.onHand}</td>
+                    <td className="py-3 px-6 font-semibold">{r.unitCost?.toLocaleString()}</td>
+                    <td className="py-3 px-6">{r.onHand?.toLocaleString()}</td>
                     <td className="py-3 px-6 font-bold text-green-600">
-                      {r.totalCost}
+                      {(r.totalCost / 1000000).toFixed(2)} M
                     </td>
                     <td className="py-3 px-6">
-                      {r.date
-                        ? new Date(r.date).toLocaleDateString("en-GB")
-                        : "-"}
+                      {r.date ? new Date(r.date).toLocaleDateString("en-GB") : "-"}
                     </td>
                   </tr>
+                ))}
+
+                {/* Date-wise total rows */}
+                {Object.entries(dailyTotalsMap)
+                  .sort((a, b) => new Date(a[0]) - new Date(b[0]))
+                  .map(([dateStr, total], idx) => (
+                    <tr key={`total-${idx}`} className="bg-gray-200 font-bold">
+                      <td className="py-3 px-6 text-left" colSpan={3}>Total for {dateStr}</td>
+                      <td className="py-3 px-6 text-green-700">{total.toFixed(2)} M</td>
+                      <td className="py-3 px-6"></td>
+                    </tr>
                 ))}
               </tbody>
             </table>
@@ -153,17 +164,16 @@ function App() {
                   interval={0}
                 />
 
-                {/* Y-axis = 0.0 - 12.0 */}
+                {/* Y-axis */}
                 <YAxis
                   type="number"
                   domain={[0, 12]}
-                  ticks={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}
+                  ticks={[0,4,8, 12]}
                   tickFormatter={(v) => v.toFixed(1)}
                   allowDecimals={true}
                   scale="linear"
                   interval={0}
                 />
-
 
                 <Tooltip />
                 <Legend />
@@ -171,34 +181,13 @@ function App() {
                 {/* Color bands */}
                 {chartData.length > 0 && (
                   <>
-                    <ReferenceArea
-                      y1={0}
-                      y2={4}
-                      x1={-0.5}
-                      x2={chartData.length - 0.5}
-                      fill="green"
-                      fillOpacity={0.1}
-                    />
-                    <ReferenceArea
-                      y1={4}
-                      y2={8}
-                      x1={-0.5}
-                      x2={chartData.length - 0.5}
-                      fill="yellow"
-                      fillOpacity={0.1}
-                    />
-                    <ReferenceArea
-                      y1={8}
-                      y2={12}
-                      x1={-0.5}
-                      x2={chartData.length - 0.5}
-                      fill="red"
-                      fillOpacity={0.1}
-                    />
+                    <ReferenceArea y1={0} y2={4} x1={-0.5} x2={chartData.length - 0.5} fill="#228B22" fillOpacity={0.2} />
+                    <ReferenceArea y1={4} y2={8} x1={-0.5} x2={chartData.length - 0.5} fill="#FFD700" fillOpacity={0.2} />
+                    <ReferenceArea y1={8} y2={12} x1={-0.5} x2={chartData.length - 0.5} fill="#FF4500" fillOpacity={0.2} />
                   </>
                 )}
 
-                {/* Line with values */}
+                {/* Line */}
                 <Line
                   type="monotone"
                   dataKey="total"
