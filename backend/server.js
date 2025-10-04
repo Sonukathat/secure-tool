@@ -130,7 +130,7 @@ app.post("/api/daily/upload", upload.single("file"), async (req, res) => {
         onHand, 
         unitCost, 
         totalCost,
-        date: new Date("2025-10-03")   // ✅ Date added for each row
+        date: new Date()   // ✅ Date added for each row
       };
     });
 
